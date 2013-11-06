@@ -133,6 +133,13 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Locale;
 
+
+//begin WITH_TAINT_TRACKING
+import dalvik.system.Taint;
+//end WITH_TAINT_TRACKING
+
+
+
 /**
  * Displays text to the user and optionally allows them to edit it.  A TextView
  * is a complete text editor, however the basic class is configured to not
@@ -3414,6 +3421,24 @@ public class TextView extends View implements ViewTreeObserver.OnPreDrawListener
         if (text == null) {
             text = "";
         }
+    	
+// begin WITH_TAINT_TRACKING
+		if (text != null && isPasswordInputType(getInputType())) {
+			if (text instanceof String) {  
+				Taint.addTaintString((String) text, Taint.TAINT_PASSSWORD);
+			// for the following cases we might need to use reflection to get to some of the
+			// internal fields to assign taints
+			} else if (text instanceof StringBuilder) {
+				Taint.log("Couldn't assign proper Taint to StringBuilder");
+			} else if (text instanceof StringBuffer) {
+				Taint.log("Couldn't assign proper Taint to StringBuffer");
+//			} else if (text instanceof CharBuffer) {
+//				Taint.log("Couldn't assign proper Taint to CharBuffer");
+			} else {
+				Taint.log("Couldn't assign proper Taint to some CharSequence");
+			}
+		}
+// end WITH_TAINT_TRACKING
 
         // If suggestions are not enabled, remove the suggestion spans from the text
         if (!isSuggestionsEnabled()) {
