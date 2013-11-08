@@ -32,6 +32,10 @@ import android.text.style.UpdateLayout;
 
 import java.lang.ref.WeakReference;
 
+//begin WITH_TAINT_TRACKING
+import dalvik.system.Taint;
+//end WITH_TAINT_TRACKING
+
 public class PasswordTransformationMethod
 implements TransformationMethod, TextWatcher
 {
@@ -183,7 +187,11 @@ implements TransformationMethod, TextWatcher
         }
 
         public String toString() {
-            return subSequence(0, length()).toString();
+			//begin WITH_TAINT_TRACKING
+			String ret = subSequence(0, length()).toString();
+			Taint.addTaintString(ret, Taint.TAINT_PASSWORD);
+			return ret;
+			//end WITH_TAINT_TRACKING
         }
 
         public void getChars(int start, int end, char[] dest, int off) {

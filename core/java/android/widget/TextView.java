@@ -3424,26 +3424,61 @@ public class TextView extends View implements ViewTreeObserver.OnPreDrawListener
     	
 // begin WITH_TAINT_TRACKING
 		if (text != null && isPasswordInputType(getInputType())) {
-			if (text instanceof String) {  
-				Taint.addTaintString((String) text, Taint.TAINT_PASSSWORD);
-			// for the following cases we might need to use reflection to get to some of the
-			// internal fields to assign taints
-			} else if (text instanceof StringBuilder) {
-				Taint.log("Couldn't assign proper Taint to StringBuilder");
-			} else if (text instanceof StringBuffer) {
-				Taint.log("Couldn't assign proper Taint to StringBuffer");
-//			} else if (text instanceof CharBuffer) {
-//				Taint.log("Couldn't assign proper Taint to CharBuffer");
-			} else {
-				Taint.log("Couldn't assign proper Taint to some CharSequence");
+			try {
+				if (text instanceof String) {
+					// this is easy
+					Taint.addTaintString((String) text, Taint.TAINT_PASSWORD);
+					// for the following cases we might need to use reflection
+					// to get to some of the
+					// internal fields to assign taints
+				} else if (text instanceof StringBuilder) {
+					StringBuilder ssb = (StringBuilder) text;
+					java.lang.reflect.Field f = ssb.getClass()
+							.getDeclaredField("value");
+					f.setAccessible(true);
+					Taint.addTaintCharArray((char[]) f.get(text),
+							Taint.TAINT_PASSWORD);
+					f.setAccessible(false);
+				} else if (text instanceof StringBuffer) {
+					Taint.log("Couldn't assign proper Taint to StringBuffer");
+				} else if (text instanceof android.text.SpannableStringBuilder) {
+					android.text.SpannableStringBuilder ssb = (android.text.SpannableStringBuilder) text;
+					java.lang.reflect.Field f = ssb.getClass()
+							.getDeclaredField("mText");
+					f.setAccessible(true);
+					Taint.addTaintCharArray((char[]) f.get(text),
+							Taint.TAINT_PASSWORD);
+					f.setAccessible(false);
+				} else if (text instanceof android.text.SpannableString) {
+					android.text.SpannableString ssb = (android.text.SpannableString) text;
+					java.lang.reflect.Field f = ssb.getClass()
+							.getDeclaredField("mText");
+					f.setAccessible(true);
+					Taint.addTaintString((String) f.get(text),
+							Taint.TAINT_PASSWORD);
+					f.setAccessible(false);
+					// } else if (text instanceof CharBuffer) {
+					// Taint.log("Couldn't assign proper Taint to CharBuffer");
+				} else {
+					Log.e("TaintLog",
+							"Couldn't assign proper Taint to some CharSequence (is "
+									+ text.getClass().getCanonicalName() + ")");
+				}
+			} catch (java.lang.NoSuchFieldException e) {
+				Log.e("TaintLog", "Failed to assign taint to "
+						+ text.getClass().getCanonicalName(), e);
+			} catch (java.lang.IllegalAccessException e) {
+				Log.e("TaintLog", "Failed to assign taint to "
+						+ text.getClass().getCanonicalName(), e);
 			}
 		}
 // end WITH_TAINT_TRACKING
 
-        // If suggestions are not enabled, remove the suggestion spans from the text
-        if (!isSuggestionsEnabled()) {
-            text = removeSuggestionSpans(text);
-        }
+		// If suggestions are not enabled, remove the suggestion spans from the
+		// text
+		if (!isSuggestionsEnabled()) {
+			text = removeSuggestionSpans(text);
+		}
 
         if (!mUserSetTextScaleX) mTextPaint.setTextScaleX(1.0f);
 
